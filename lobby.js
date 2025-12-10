@@ -4,9 +4,8 @@ import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 const auth = window.auth;
 const db = window.db;
 
-const playersList = document.getElementById('friendsList'); // reuse this ul
+const playersList = document.getElementById('playersList');
 const logoutBtn = document.getElementById('logoutBtn');
-const createGameBtn = document.getElementById('createGameBtn');
 
 let currentUser=null;
 let userUid=null;
@@ -47,7 +46,7 @@ function initLobby(){
   });
 }
 
-// Create a new game instantly
+// Create a new game instantly vs a player
 function startGame(opponentUid){
   const newGameRef = push(ref(db,'games'));
   const gameId = newGameRef.key;
@@ -69,9 +68,37 @@ function startGame(opponentUid){
     whiteTime:600,
     blackTime:600,
     whiteName: currentUser.displayName||currentUser.email,
-    blackName: 'Waiting...' // will be updated for opponent on their side
+    blackName: 'Waiting...' // will update automatically for opponent
   });
 
-  // Redirect both players to game page immediately
+  window.location.href='game.html?gameId='+gameId;
+}
+
+// ---------------- BOT GAMES ----------------
+window.startBotGame = function(level){
+  const newGameRef = push(ref(db,'games'));
+  const gameId = newGameRef.key;
+
+  set(newGameRef,{
+    white: userUid,
+    black: 'BOT_'+level,
+    board:[
+      ['r','n','b','q','k','b','n','r'],
+      ['p','p','p','p','p','p','p','p'],
+      ['','','','','','','',''],
+      ['','','','','','','',''],
+      ['','','','','','','',''],
+      ['','','','','','','',''],
+      ['P','P','P','P','P','P','P','P'],
+      ['R','N','B','Q','K','B','N','R']
+    ],
+    turn:'white',
+    whiteTime:600,
+    blackTime:600,
+    whiteName: currentUser.displayName||currentUser.email,
+    blackName: 'Bot ('+level+')',
+    level: level
+  });
+
   window.location.href='game.html?gameId='+gameId;
 }
