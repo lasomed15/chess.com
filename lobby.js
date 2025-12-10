@@ -1,18 +1,16 @@
-import { ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { ref, set, push, onValue, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
 const auth = window.auth;
 const db = window.db;
 
-const friendsList = document.getElementById('friendsList');
-const invitesList = document.getElementById('invitesList');
-const createGameBtn = document.getElementById('createGameBtn');
+const playersList = document.getElementById('friendsList'); // reuse this ul
 const logoutBtn = document.getElementById('logoutBtn');
+const createGameBtn = document.getElementById('createGameBtn');
 
 let currentUser=null;
 let userUid=null;
 
-// Redirect if not logged in
 onAuthStateChanged(auth,user=>{
   if(!user) window.location.href='index.html';
   currentUser=user;
@@ -24,57 +22,39 @@ logoutBtn.addEventListener('click', ()=>{
   signOut(auth).then(()=> window.location.href='index.html');
 });
 
-// --- Lobby logic ---
 function initLobby(){
-  const usersRef = ref(db,'users');
-  const invitesRef = ref(db,'invitations/'+userUid);
-
   // Add current user if not exist
   set(ref(db,'users/'+userUid),{name:currentUser.displayName||currentUser.email,online:true});
 
-  // Show online friends
+  // Show all signed-up players
+  const usersRef = ref(db,'users');
   onValue(usersRef,snapshot=>{
     const data=snapshot.val()||{};
-    friendsList.innerHTML='';
+    playersList.innerHTML='';
     for(const uid in data){
       if(uid!==userUid){
-        const li=document.createElement('li');
-        li.textContent=data[uid].name;
-        const btn=document.createElement('button');
-        btn.textContent='Invite';
-        btn.addEventListener('click', ()=> sendInvite(uid));
-        li.appendChild(btn);
-        friendsList.appendChild(li);
-      }
-    }
-  });
+        const li = document.createElement('li');
+        li.textContent = data[uid].name;
 
-  // Show invitations
-  onValue(invitesRef,snapshot=>{
-    const data=snapshot.val()||{};
-    invitesList.innerHTML='';
-    for(const key in data){
-      const li=document.createElement('li');
-      li.textContent = `Game invite from ${data[key].fromName}`;
-      const acceptBtn=document.createElement('button');
-      acceptBtn.textContent='Accept';
-      acceptBtn.addEventListener('click', ()=>{
-        window.location.href='game.html?gameId='+data[key].gameId;
-        remove(ref(db,'invitations/'+userUid+'/'+key));
-      });
-      li.appendChild(acceptBtn);
-      invitesList.appendChild(li);
+        const playBtn = document.createElement('button');
+        playBtn.textContent = 'Play vs';
+        playBtn.addEventListener('click', ()=>startGame(uid));
+
+        li.appendChild(playBtn);
+        playersList.appendChild(li);
+      }
     }
   });
 }
 
-function sendInvite(toUid){
+// Create a new game instantly
+function startGame(opponentUid){
   const newGameRef = push(ref(db,'games'));
   const gameId = newGameRef.key;
-  // Add initial board & info
+
   set(newGameRef,{
-    white:userUid,
-    black:toUid,
+    white: userUid,
+    black: opponentUid,
     board:[
       ['r','n','b','q','k','b','n','r'],
       ['p','p','p','p','p','p','p','p'],
@@ -87,16 +67,11 @@ function sendInvite(toUid){
     ],
     turn:'white',
     whiteTime:600,
-    blackTime:600
+    blackTime:600,
+    whiteName: currentUser.displayName||currentUser.email,
+    blackName: 'Waiting...' // will be updated for opponent on their side
   });
-  // Add invitation to friend
-  set(ref(db,'invitations/'+toUid+'/'+newGameRef.key),{
-    from:userUid,
-    fromName:currentUser.displayName||currentUser.email,
-    gameId
-  });
-}
 
-createGameBtn.addEventListener('click', ()=>{
-  alert("Invite a friend to start a new game!");
-});
+  // Redirect both players to game page immediately
+  window.location.href='game.html?gameId='+gameId;
+}
