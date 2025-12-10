@@ -6,10 +6,11 @@
   <title>Online Chess</title>
   <link rel="stylesheet" href="style.css">
 
-  <!-- Firebase SDK (modular) -->
+  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getDatabase } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAHNV0-qSPP0boRzNBwhKbgZURrOikAhyA",
@@ -23,13 +24,32 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    window.db = getDatabase(app); // make db global
+    window.db = getDatabase(app);
+    window.auth = getAuth(app);
   </script>
 </head>
 <body>
   <h1>Online Chess</h1>
 
-  <div id="turn">White's Turn</div>
+  <!-- Authentication Modal -->
+  <div id="authModal" class="modal">
+    <div class="modal-content">
+      <h3>Login / Sign Up</h3>
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password">
+      <button id="signupBtn">Sign Up</button>
+      <button id="loginBtn">Login</button>
+      <hr>
+      <button id="googleBtn">Sign in with Google</button>
+    </div>
+  </div>
+
+  <div id="players">
+    <div>White: <span id="whitePlayer">Waiting...</span></div>
+    <div>Black: <span id="blackPlayer">Waiting...</span></div>
+  </div>
+
+  <div id="turn">Waiting for players...</div>
 
   <div id="chessboard"></div>
 
