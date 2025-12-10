@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Lobby</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getDatabase } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHNV0-qSPP0boRzNBwhKbgZURrOikAhyA",
+      authDomain: "chess-16c78.firebaseapp.com",
+      databaseURL: "https://chess-16c78-default-rtdb.firebaseio.com",
+      projectId: "chess-16c78",
+      storageBucket: "chess-16c78.appspot.com",
+      messagingSenderId: "141110978218",
+      appId: "1:141110978218:web:96b3170cc3f78ba86fd2d3",
+      measurementId: "G-P6DF300YWF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    window.auth = getAuth(app);
+    window.db = getDatabase(app);
+  </script>
+</head>
+<body>
+  <h1>Chess Lobby</h1>
+  <button id="logoutBtn">Logout</button>
+
+  <h2>Online Friends</h2>
+  <ul id="friendsList"></ul>
+
+  <h2>Game Invitations</h2>
+  <ul id="invitesList"></ul>
+
+  <button id="createGameBtn">Create New Game</button>
+
+  <script type="module" src="lobby.js"></script>
+</body>
+</html>
