@@ -30,13 +30,13 @@
   <h1>Chess Lobby</h1>
   <button id="logoutBtn">Logout</button>
 
-  <h2>Online Friends</h2>
-  <ul id="friendsList"></ul>
+  <h2>All Players</h2>
+  <ul id="playersList"></ul>
 
-  <h2>Game Invitations</h2>
-  <ul id="invitesList"></ul>
-
-  <button id="createGameBtn">Create New Game</button>
+  <h2>Play vs Bot</h2>
+  <button onclick="startBotGame('easy')">Easy Bot</button>
+  <button onclick="startBotGame('medium')">Medium Bot</button>
+  <button onclick="startBotGame('hard')">Hard Bot</button>
 
   <script type="module" src="lobby.js"></script>
 </body>
