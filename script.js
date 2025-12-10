@@ -4,6 +4,8 @@ const board = document.getElementById('chessboard');
 const whiteTimerEl = document.getElementById('white-timer');
 const blackTimerEl = document.getElementById('black-timer');
 const turnEl = document.getElementById('turn');
+const promotionModal = document.getElementById('promotionModal');
+const promotionOptions = document.getElementById('promotionOptions');
 
 const pieces = {
   'r':'♜','n':'♞','b':'♝','q':'♛','k':'♚','p':'♟',
@@ -27,6 +29,7 @@ let turn = 'white';
 let whiteTime = 10*60;
 let blackTime = 10*60;
 let timerInterval = null;
+let pendingPromotion = null;
 
 // Firebase reference
 const gameRef = ref(db, 'games/game1');
@@ -81,13 +84,14 @@ function onSquareClick(row,col){
       startPosition[row][col] = startPosition[selected.row][selected.col];
       startPosition[selected.row][selected.col]='';
 
-      // Pawn promotion
+      // Pawn promotion check
       if(startPosition[row][col].toLowerCase()==='p'){
         if((startPosition[row][col]==='P' && row===0) || (startPosition[row][col]==='p' && row===7)){
-          const promo = prompt("Promote pawn to (Q,R,B,N)","Q");
-          const valid=["Q","R","B","N"];
-          const chosen = promo && valid.includes(promo.toUpperCase()) ? promo.toUpperCase() : "Q";
-          startPosition[row][col] = startPosition[row][col]==='P'? chosen : chosen.toLowerCase();
+          pendingPromotion = {row,col,piece:startPosition[row][col]};
+          promotionModal.classList.remove('hidden');
+          selected=null; legalMoves=[];
+          createBoard();
+          return;
         }
       }
 
@@ -116,6 +120,33 @@ function onSquareClick(row,col){
     }
   }
 }
+
+// Pawn promotion button handler
+promotionOptions.querySelectorAll('button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    if(!pendingPromotion) return;
+    const choice = btn.dataset.piece;
+    const {row,col,piece} = pendingPromotion;
+    startPosition[row][col] = piece==='P'?choice:choice.toLowerCase();
+    pendingPromotion = null;
+    promotionModal.classList.add('hidden');
+
+    if(isCheck(getOpponentColor(turn))){
+      if(isCheckmate(getOpponentColor(turn))){
+        turnEl.textContent = `${turn.charAt(0).toUpperCase()+turn.slice(1)} wins by checkmate!`;
+        setTimeout(resetGame,2000);
+        updateDatabase();
+        return;
+      } else {
+        turnEl.textContent = `${getOpponentColor(turn).charAt(0).toUpperCase()+getOpponentColor(turn).slice(1)} is in check!`;
+      }
+    }
+
+    turn = getOpponentColor(turn);
+    updateDatabase();
+    createBoard();
+  });
+});
 
 function isPlayersTurn(piece){
   return (turn==='white' && piece===piece.toUpperCase())||(turn==='black' && piece===piece.toLowerCase());
