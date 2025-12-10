@@ -3,24 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chess Game</title>
+  <title>Online Chess</title>
   <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDK (modular) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHNV0-qSPP0boRzNBwhKbgZURrOikAhyA",
+      authDomain: "chess-16c78.firebaseapp.com",
+      databaseURL: "https://chess-16c78-default-rtdb.firebaseio.com",
+      projectId: "chess-16c78",
+      storageBucket: "chess-16c78.appspot.com",
+      messagingSenderId: "141110978218",
+      appId: "1:141110978218:web:96b3170cc3f78ba86fd2d3",
+      measurementId: "G-P6DF300YWF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    window.db = getDatabase(app); // make db global
+  </script>
 </head>
 <body>
-  <h1>Chess Game</h1>
-  
-  <!-- Turn indicator -->
+  <h1>Online Chess</h1>
+
   <div id="turn">White's Turn</div>
-  
-  <!-- Chessboard -->
+
   <div id="chessboard"></div>
 
-  <!-- Timers -->
   <div id="timers">
     <div>White: <span id="white-timer">10:00</span></div>
     <div>Black: <span id="black-timer">10:00</span></div>
   </div>
 
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
