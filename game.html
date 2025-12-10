@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Game</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHNV0-qSPP0boRzNBwhKbgZURrOikAhyA",
+      authDomain: "chess-16c78.firebaseapp.com",
+      databaseURL: "https://chess-16c78-default-rtdb.firebaseio.com",
+      projectId: "chess-16c78",
+      storageBucket: "chess-16c78.appspot.com",
+      messagingSenderId: "141110978218",
+      appId: "1:141110978218:web:96b3170cc3f78ba86fd2d3",
+      measurementId: "G-P6DF300YWF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    window.db = getDatabase(app);
+    window.auth = getAuth(app);
+  </script>
+</head>
+<body>
+  <h1>Online Chess</h1>
+  <div id="players">
+    <div>White: <span id="whitePlayer">Waiting...</span></div>
+    <div>Black: <span id="blackPlayer">Waiting...</span></div>
+  </div>
+  <div id="turn">Waiting for players...</div>
+
+  <div id="chessboard"></div>
+
+  <div id="timers">
+    <div>White: <span id="white-timer">10:00</span></div>
+    <div>Black: <span id="black-timer">10:00</span></div>
+  </div>
+
+  <!-- Pawn Promotion Modal -->
+  <div id="promotionModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Choose piece for promotion</h3>
+      <div id="promotionOptions">
+        <button data-piece="Q">Queen</button>
+        <button data-piece="R">Rook</button>
+        <button data-piece="B">Bishop</button>
+        <button data-piece="N">Knight</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
