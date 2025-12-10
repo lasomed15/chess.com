@@ -3,13 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Online Chess</title>
+  <title>Chess Login</title>
   <link rel="stylesheet" href="style.css">
-
   <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getDatabase } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -24,53 +22,20 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    window.db = getDatabase(app);
     window.auth = getAuth(app);
   </script>
 </head>
 <body>
-  <h1>Online Chess</h1>
-
-  <!-- Authentication Modal -->
-  <div id="authModal" class="modal">
-    <div class="modal-content">
-      <h3>Login / Sign Up</h3>
-      <input type="email" id="email" placeholder="Email">
-      <input type="password" id="password" placeholder="Password">
-      <button id="signupBtn">Sign Up</button>
-      <button id="loginBtn">Login</button>
-      <hr>
-      <button id="googleBtn">Sign in with Google</button>
-    </div>
+  <div class="modal">
+    <h2>Sign In / Sign Up</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button id="signupBtn">Sign Up</button>
+    <button id="loginBtn">Login</button>
+    <hr>
+    <button id="googleBtn">Sign in with Google</button>
   </div>
 
-  <div id="players">
-    <div>White: <span id="whitePlayer">Waiting...</span></div>
-    <div>Black: <span id="blackPlayer">Waiting...</span></div>
-  </div>
-
-  <div id="turn">Waiting for players...</div>
-
-  <div id="chessboard"></div>
-
-  <div id="timers">
-    <div>White: <span id="white-timer">10:00</span></div>
-    <div>Black: <span id="black-timer">10:00</span></div>
-  </div>
-
-  <!-- Pawn Promotion Modal -->
-  <div id="promotionModal" class="modal hidden">
-    <div class="modal-content">
-      <h3>Choose piece for promotion</h3>
-      <div id="promotionOptions">
-        <button data-piece="Q">Queen</button>
-        <button data-piece="R">Rook</button>
-        <button data-piece="B">Bishop</button>
-        <button data-piece="N">Knight</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="script.js"></script>
+  <script type="module" src="auth.js"></script>
 </body>
 </html>
