@@ -1,18 +1,33 @@
-import { ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-const board = document.getElementById('chessboard');
+const boardEl = document.getElementById('chessboard');
 const whiteTimerEl = document.getElementById('white-timer');
 const blackTimerEl = document.getElementById('black-timer');
 const turnEl = document.getElementById('turn');
 const promotionModal = document.getElementById('promotionModal');
 const promotionOptions = document.getElementById('promotionOptions');
+const authModal = document.getElementById('authModal');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const signupBtn = document.getElementById('signupBtn');
+const loginBtn = document.getElementById('loginBtn');
+const googleBtn = document.getElementById('googleBtn');
+const whitePlayerEl = document.getElementById('whitePlayer');
+const blackPlayerEl = document.getElementById('blackPlayer');
 
 const pieces = {
   'r':'♜','n':'♞','b':'♝','q':'♛','k':'♚','p':'♟',
   'R':'♖','N':'♘','B':'♗','Q':'♕','K':'♔','P':'♙'
 };
 
-let startPosition = [
+let board = [
   ['r','n','b','q','k','b','n','r'],
   ['p','p','p','p','p','p','p','p'],
   ['','','','','','','',''],
@@ -30,68 +45,135 @@ let whiteTime = 10*60;
 let blackTime = 10*60;
 let timerInterval = null;
 let pendingPromotion = null;
+let playerColor = null; // 'white' or 'black'
 
-// Firebase reference
+// Firebase Realtime Database reference
 const gameRef = ref(db, 'games/game1');
+const playersRef = ref(db, 'games/game1/players');
 
-// Listen for updates
-onValue(gameRef, (snapshot)=>{
+// Authentication
+const auth = window.auth;
+const provider = new GoogleAuthProvider();
+
+// -------- AUTH HANDLERS --------
+
+// Sign-up
+signupBtn.addEventListener('click', ()=>{
+  const email = emailInput.value;
+  const password = passwordInput.value;
+  createUserWithEmailAndPassword(auth,email,password)
+    .then(userCredential=>{
+      console.log("Signed up:", userCredential.user.email);
+    }).catch(err=>alert(err.message));
+});
+
+// Login
+loginBtn.addEventListener('click', ()=>{
+  const email = emailInput.value;
+  const password = passwordInput.value;
+  signInWithEmailAndPassword(auth,email,password)
+    .then(userCredential=>{
+      console.log("Logged in:", userCredential.user.email);
+    }).catch(err=>alert(err.message));
+});
+
+// Google Login
+googleBtn.addEventListener('click', ()=>{
+  signInWithPopup(auth, provider)
+    .then(result=>{
+      console.log("Google Sign-In:", result.user.displayName);
+    }).catch(err=>alert(err.message));
+});
+
+// Monitor auth state
+onAuthStateChanged(auth, user=>{
+  if(user){
+    authModal.classList.add('hidden');
+    assignPlayer(user);
+  } else {
+    authModal.classList.remove('hidden');
+  }
+});
+
+// -------- PLAYER ASSIGNMENT --------
+function assignPlayer(user){
+  get(playersRef).then(snapshot=>{
+    const data = snapshot.val() || {};
+    if(!data.white){
+      playerColor='white';
+      set(ref(db,'games/game1/players/white'),{uid:user.uid,name:user.displayName||user.email});
+    } else if(!data.black && data.white.uid!==user.uid){
+      playerColor='black';
+      set(ref(db,'games/game1/players/black'),{uid:user.uid,name:user.displayName||user.email});
+    } else {
+      playerColor='spectator';
+      alert("You are a spectator!");
+    }
+    updatePlayerDisplay();
+  });
+}
+
+function updatePlayerDisplay(){
+  onValue(playersRef, snapshot=>{
+    const data = snapshot.val()||{};
+    whitePlayerEl.textContent = data.white?.name || "Waiting...";
+    blackPlayerEl.textContent = data.black?.name || "Waiting...";
+  });
+}
+
+// -------- GAME LOGIC --------
+onValue(gameRef, snapshot=>{
   const data = snapshot.val();
   if(!data) return;
-
-  startPosition = data.board;
+  board = data.board;
   turn = data.turn;
   whiteTime = data.whiteTime;
   blackTime = data.blackTime;
-
   createBoard();
 });
 
-// Update Firebase
 function updateDatabase(){
-  set(gameRef, { board: startPosition, turn, whiteTime, blackTime });
+  set(gameRef, {board, turn, whiteTime, blackTime});
 }
 
 function createBoard(){
-  board.innerHTML = '';
-  for(let row=0; row<8; row++){
-    for(let col=0; col<8; col++){
+  boardEl.innerHTML='';
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
       const square = document.createElement('div');
-      square.classList.add('square', (row+col)%2===0?'white':'black');
-      square.dataset.row=row; square.dataset.col=col;
-      square.textContent = pieces[startPosition[row][col]]||'';
-
-      if(selected && selected.row===row && selected.col===col) square.classList.add('selected');
-      if(legalMoves.some(m=>m.row===row && m.col===col)) square.classList.add('highlight');
-      if(isCheck(turn) && startPosition[row][col].toLowerCase()==='k' &&
-        ((turn==='white' && startPosition[row][col]==='K')||(turn==='black' && startPosition[row][col]==='k')))
+      square.classList.add('square',(r+c)%2===0?'white':'black');
+      square.dataset.row=r; square.dataset.col=c;
+      square.textContent = pieces[board[r][c]]||'';
+      if(selected && selected.row===r && selected.col===c) square.classList.add('selected');
+      if(legalMoves.some(m=>m.row===r && m.col===c)) square.classList.add('highlight');
+      if(isCheck(turn) && board[r][c].toLowerCase()==='k' &&
+        ((turn==='white' && board[r][c]==='K')||(turn==='black' && board[r][c]==='k')))
         square.classList.add('check');
 
-      square.addEventListener('click', ()=>onSquareClick(row,col));
-      board.appendChild(square);
+      square.addEventListener('click',()=>onSquareClick(r,c));
+      boardEl.appendChild(square);
     }
   }
   turnEl.textContent = turn.charAt(0).toUpperCase()+turn.slice(1)+"'s Turn";
-  whiteTimerEl.textContent = formatTime(whiteTime);
-  blackTimerEl.textContent = formatTime(blackTime);
+  whiteTimerEl.textContent=formatTime(whiteTime);
+  blackTimerEl.textContent=formatTime(blackTime);
 }
 
-function onSquareClick(row,col){
-  const piece = startPosition[row][col];
-
+function onSquareClick(r,c){
+  const piece=board[r][c];
+  if(playerColor!==turn && playerColor!=='spectator') return; // only player's turn
   if(selected){
-    if(legalMoves.some(m=>m.row===row && m.col===col)){
-      startPosition[row][col] = startPosition[selected.row][selected.col];
-      startPosition[selected.row][selected.col]='';
+    if(legalMoves.some(m=>m.row===r && m.col===c)){
+      board[r][c]=board[selected.row][selected.col];
+      board[selected.row][selected.col]='';
 
-      // Pawn promotion check
-      if(startPosition[row][col].toLowerCase()==='p'){
-        if((startPosition[row][col]==='P' && row===0) || (startPosition[row][col]==='p' && row===7)){
-          pendingPromotion = {row,col,piece:startPosition[row][col]};
+      // Pawn promotion
+      if(board[r][c].toLowerCase()==='p'){
+        if((board[r][c]==='P' && r===0)||(board[r][c]==='p' && r===7)){
+          pendingPromotion={row:r,col:c,piece:board[r][c]};
           promotionModal.classList.remove('hidden');
           selected=null; legalMoves=[];
-          createBoard();
-          return;
+          createBoard(); return;
         }
       }
 
@@ -99,90 +181,79 @@ function onSquareClick(row,col){
         if(isCheckmate(getOpponentColor(turn))){
           turnEl.textContent = `${turn.charAt(0).toUpperCase()+turn.slice(1)} wins by checkmate!`;
           setTimeout(resetGame,2000);
-          updateDatabase();
-          return;
+          updateDatabase(); return;
         } else {
           turnEl.textContent = `${getOpponentColor(turn).charAt(0).toUpperCase()+getOpponentColor(turn).slice(1)} is in check!`;
         }
       }
 
-      turn = getOpponentColor(turn);
+      turn=getOpponentColor(turn);
       updateDatabase();
     }
-    selected=null;
-    legalMoves=[];
+    selected=null; legalMoves=[];
     createBoard();
   } else {
     if(piece && isPlayersTurn(piece)){
-      selected={row,col};
-      legalMoves=getLegalMoves(row,col);
+      selected={row:r,col:c};
+      legalMoves=getLegalMoves(r,c);
       createBoard();
     }
   }
 }
 
-// Pawn promotion button handler
+// Pawn promotion buttons
 promotionOptions.querySelectorAll('button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     if(!pendingPromotion) return;
     const choice = btn.dataset.piece;
     const {row,col,piece} = pendingPromotion;
-    startPosition[row][col] = piece==='P'?choice:choice.toLowerCase();
-    pendingPromotion = null;
+    board[row][col] = piece==='P'?choice:choice.toLowerCase();
+    pendingPromotion=null;
     promotionModal.classList.add('hidden');
 
     if(isCheck(getOpponentColor(turn))){
       if(isCheckmate(getOpponentColor(turn))){
         turnEl.textContent = `${turn.charAt(0).toUpperCase()+turn.slice(1)} wins by checkmate!`;
         setTimeout(resetGame,2000);
-        updateDatabase();
-        return;
+        updateDatabase(); return;
       } else {
         turnEl.textContent = `${getOpponentColor(turn).charAt(0).toUpperCase()+getOpponentColor(turn).slice(1)} is in check!`;
       }
     }
 
-    turn = getOpponentColor(turn);
+    turn=getOpponentColor(turn);
     updateDatabase();
     createBoard();
   });
 });
 
+// Utility functions
 function isPlayersTurn(piece){
   return (turn==='white' && piece===piece.toUpperCase())||(turn==='black' && piece===piece.toLowerCase());
 }
 
 function getOpponentColor(color){ return color==='white'?'black':'white'; }
 
-function getLegalMoves(r1,c1){
+function getLegalMoves(r1,c1){ /* same logic as before */ 
   const moves=[];
   for(let r=0;r<8;r++){for(let c=0;c<8;c++){
     if(isLegalMove(r1,c1,r,c)){
-      const backupFrom=startPosition[r1][c1], backupTo=startPosition[r][c];
-      startPosition[r][c]=backupFrom; startPosition[r1][c1]='';
+      const b1=board[r1][c1], b2=board[r][c];
+      board[r][c]=b1; board[r1][c1]='';
       if(!isCheck(turn)) moves.push({row:r,col:c});
-      startPosition[r1][c1]=backupFrom; startPosition[r][c]=backupTo;
+      board[r1][c1]=b1; board[r][c]=b2;
     }
-  }}
-  return moves;
+  }} return moves;
 }
 
-function isLegalMove(r1,c1,r2,c2){
-  const piece=startPosition[r1][c1], target=startPosition[r2][c2];
+function isLegalMove(r1,c1,r2,c2){ /* pawn/rook/knight/bishop/queen/king logic as before */ 
+  const piece=board[r1][c1], target=board[r2][c2];
   if(target && ((piece===piece.toUpperCase() && target===target.toUpperCase())||(piece===piece.toLowerCase() && target===target.toLowerCase()))) return false;
   const dr=r2-r1, dc=c2-c1;
-
   switch(piece.toLowerCase()){
     case 'p':
-      if(piece==='P'){
-        if(dc===0 && dr===-1 && !target) return true;
-        if(dc===0 && dr===-2 && r1===6 && !target && !startPosition[r1-1][c1]) return true;
-        if(Math.abs(dc)===1 && dr===-1 && target && target===target.toLowerCase()) return true;
-      } else {
-        if(dc===0 && dr===1 && !target) return true;
-        if(dc===0 && dr===2 && r1===1 && !target && !startPosition[r1+1][c1]) return true;
-        if(Math.abs(dc)===1 && dr===1 && target && target===target.toUpperCase()) return true;
-      }
+      if(piece==='P'){ if(dc===0 && dr===-1 && !target) return true; if(dc===0 && dr===-2 && r1===6 && !target && !board[r1-1][c1]) return true; if(Math.abs(dc)===1 && dr===-1 && target && target===target.toLowerCase()) return true;}
+      else { if(dc===0 && dr===1 && !target) return true; if(dc===0 && dr===2 && r1===1 && !target && !board[r1+1][c1]) return true; if(Math.abs(dc)===1 && dr===1 && target && target===target.toUpperCase()) return true;}
       return false;
     case 'r': if(dr===0||dc===0) return isPathClear(r1,c1,r2,c2); return false;
     case 'n': return (Math.abs(dr)===2 && Math.abs(dc)===1)||(Math.abs(dr)===1 && Math.abs(dc)===2);
@@ -196,39 +267,36 @@ function isLegalMove(r1,c1,r2,c2){
 function isPathClear(r1,c1,r2,c2){
   const dr=Math.sign(r2-r1), dc=Math.sign(c2-c1);
   let r=r1+dr, c=c1+dc;
-  while(r!==r2 || c!==c2){ if(startPosition[r][c]!=='') return false; r+=dr; c+=dc;}
+  while(r!==r2 || c!==c2){ if(board[r][c]!=='') return false; r+=dr; c+=dc;}
   return true;
 }
 
 function isCheck(color){
   const king=color==='white'?'K':'k';
   let kingPos=null;
-  for(let r=0;r<8;r++){for(let c=0;c<8;c++){if(startPosition[r][c]===king) kingPos={r,c};}}
+  for(let r=0;r<8;r++){for(let c=0;c<8;c++){if(board[r][c]===king) kingPos={r,c};}}
   for(let r=0;r<8;r++){for(let c=0;c<8;c++){
-    const piece=startPosition[r][c];
-    if(piece && ((color==='white' && piece===piece.toLowerCase())||(color==='black' && piece===piece.toUpperCase()))){
+    const p=board[r][c];
+    if(p && ((color==='white' && p===p.toLowerCase())||(color==='black' && p===p.toUpperCase()))){
       if(isLegalMove(r,c,kingPos.r,kingPos.c)) return true;
     }
-  }}
-  return false;
+  }} return false;
 }
 
 function isCheckmate(color){
   for(let r1=0;r1<8;r1++){for(let c1=0;c1<8;c1++){
-    const piece=startPosition[r1][c1];
+    const piece=board[r1][c1];
     if(piece && ((color==='white' && piece===piece.toUpperCase())||(color==='black' && piece===piece.toLowerCase()))){
       for(let r2=0;r2<8;r2++){for(let c2=0;c2<8;c2++){
         if(isLegalMove(r1,c1,r2,c2)){
-          const backupFrom=startPosition[r1][c1], backupTo=startPosition[r2][c2];
-          startPosition[r2][c2]=backupFrom; startPosition[r1][c1]='';
-          const stillCheck=isCheck(color);
-          startPosition[r1][c1]=backupFrom; startPosition[r2][c2]=backupTo;
-          if(!stillCheck) return false;
+          const b1=board[r1][c1], b2=board[r2][c2];
+          board[r2][c2]=b1; board[r1][c1]='';
+          if(!isCheck(color)) { board[r1][c1]=b1; board[r2][c2]=b2; return false;}
+          board[r1][c1]=b1; board[r2][c2]=b2;
         }
       }}
     }
-  }}
-  return true;
+  }} return true;
 }
 
 // Timer
@@ -240,14 +308,14 @@ function startTimer(){
   },1000);
 }
 
-function formatTime(seconds){
-  const m=Math.floor(seconds/60).toString().padStart(2,'0');
-  const s=(seconds%60).toString().padStart(2,'0');
+function formatTime(sec){
+  const m=Math.floor(sec/60).toString().padStart(2,'0');
+  const s=(sec%60).toString().padStart(2,'0');
   return `${m}:${s}`;
 }
 
 function resetGame(){
-  startPosition = [
+  board=[
     ['r','n','b','q','k','b','n','r'],
     ['p','p','p','p','p','p','p','p'],
     ['','','','','','','',''],
@@ -257,9 +325,10 @@ function resetGame(){
     ['P','P','P','P','P','P','P','P'],
     ['R','N','B','Q','K','B','N','R']
   ];
-  turn='white'; whiteTime=blackTime=10*60; selected=null; legalMoves=[];
+  turn='white'; whiteTime=blackTime=10*60;
+  selected=null; legalMoves=[]; pendingPromotion=null;
   createBoard(); updateDatabase();
 }
 
-createBoard();
+// Start timer
 startTimer();
