@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chess Login</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getDatabase } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAHNV0-qSPP0boRzNBwhKbgZURrOikAhyA",
@@ -23,19 +23,19 @@
 
     const app = initializeApp(firebaseConfig);
     window.auth = getAuth(app);
+    window.db = getDatabase(app);
   </script>
 </head>
 <body>
-  <div class="modal">
-    <h2>Sign In / Sign Up</h2>
+  <div class="login-container">
+    <h1>Login / Sign-Up</h1>
+    <input type="text" id="username" placeholder="Username">
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="password" placeholder="Password">
     <button id="signupBtn">Sign Up</button>
     <button id="loginBtn">Login</button>
-    <hr>
-    <button id="googleBtn">Sign in with Google</button>
+    <button id="googleBtn">Login with Google</button>
   </div>
-
   <script type="module" src="auth.js"></script>
 </body>
 </html>
